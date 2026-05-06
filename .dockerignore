@@ -1,0 +1,30 @@
+**/.git
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/*.pyc
+
+# venv lives at the repo root — don't ship it into the build context
+bin/
+include/
+lib/
+lib64
+share/
+snapshots/
+pyvenv.cfg
+.qdrant-initialized
+
+# docker artifacts
+docker-compose.yml
+Dockerfile
+.dockerignore
+.env
+.env.*
+models/
+README.docker.md
+
+# editor/OS
+.claude/
+.vscode/
+.idea/
+.DS_Store

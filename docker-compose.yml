@@ -1,0 +1,37 @@
+services:
+  whispr:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: openwhispr-server:local
+    container_name: openwhispr-server
+    restart: unless-stopped
+    ports:
+      - "${BIND_HOST:-127.0.0.1}:${PORT:-8080}:8080"
+    volumes:
+      - ${MODEL_DIR:-./models}/huggingface:/root/.cache/huggingface
+      - ${MODEL_DIR:-./models}/parakeet:/root/.cache/local-transcribe/parakeet
+    command:
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8080"
+      - --model
+      - "${MODEL:-turbo}"
+      - --device
+      - "${DEVICE:-cuda}"
+      - --compute-type
+      - "${COMPUTE_TYPE:-int8}"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2).status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 120s
+      retries: 3
