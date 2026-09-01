@@ -2,8 +2,20 @@
 EXEC_PATH="/opt/openwhispr/openwhispr"
 
 # ── ensure the dockerized transcription server is up ────────────────────────
-# Override either with an env var if you move the compose project.
-WHISPR_COMPOSE_DIR="${WHISPR_COMPOSE_DIR:-/home/chris/dev/venv/v-openwhispr-docker}"
+# Where the compose project lives. Resolved in order:
+#   1. $WHISPR_COMPOSE_DIR in the environment
+#   2. the path in ~/.config/openwhispr-docker/compose-dir
+#   3. ~/docker/openwhispr-docker
+# The .desktop launcher does not inherit an interactive shell's environment, so
+# prefer (2) over exporting the var in ~/.bashrc.
+if [[ -z "${WHISPR_COMPOSE_DIR}" ]]; then
+    _whispr_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/openwhispr-docker/compose-dir"
+    if [[ -r "${_whispr_cfg}" ]]; then
+        WHISPR_COMPOSE_DIR="$(<"${_whispr_cfg}")"
+    else
+        WHISPR_COMPOSE_DIR="$HOME/docker/openwhispr-docker"
+    fi
+fi
 WHISPR_PORT="$(grep -E '^PORT=' "${WHISPR_COMPOSE_DIR}/.env" 2>/dev/null | cut -d= -f2-)"
 WHISPR_PORT="${WHISPR_PORT:-8080}"
 
