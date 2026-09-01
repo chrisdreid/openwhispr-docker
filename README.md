@@ -11,6 +11,8 @@ Self-contained Docker image for the [multi-model-audio-transcript-server](./mult
 ## Quick start
 
 ```bash
+git clone --recurse-submodules https://github.com/chrisdreid/openwhispr-docker.git
+cd openwhispr-docker
 ./setup.sh                # creates .env + ./models, links existing host caches
 docker compose up -d      # builds the image (first run) and starts the server
 docker compose logs -f    # watch model loading
@@ -18,6 +20,14 @@ curl http://127.0.0.1:8080/health
 ```
 
 Point OpenWhispr at `http://127.0.0.1:8080`.
+
+> The transcription server is a **git submodule**. If you cloned without `--recurse-submodules`,
+> `multi-model-audio-transcript-server/` is empty and the build fails with
+> `"/multi-model-audio-transcript-server/transcribe.py": not found` — run
+> `git submodule update --init`.
+
+**This README covers the server only.** For the complete system — installing the OpenWhispr GUI,
+the wrapper, the `openwhispr://` handler, and the global dictation hotkey — see **[SETUP.md](./SETUP.md)**.
 
 ## Configuration (`.env`)
 
@@ -44,6 +54,10 @@ ${MODEL_DIR}/parakeet     →  /root/.cache/local-transcribe/parakeet
 `setup.sh` symlinks these to your existing host caches (`~/.cache/huggingface` and `~/.cache/local-transcribe/parakeet`) when present, so nothing already downloaded is re-fetched. To use a different location for the models entirely, point `MODEL_DIR` at any directory and `setup.sh` will create the subdirs there.
 
 ## Hooking up the `openwhispr` GUI launcher
+
+**Prerequisite:** the OpenWhispr GUI must already be installed at `/opt/openwhispr/openwhispr` — it is a
+separate upstream project ([OpenWhispr/openwhispr](https://github.com/OpenWhispr/openwhispr)) and is *not*
+installed by this repo. See [SETUP.md §4](./SETUP.md) for the AppImage install.
 
 The Linux `openwhispr` package installs a tiny shell wrapper at `/usr/local/bin/openwhispr` that forks `/opt/openwhispr/openwhispr`. `openwhispr-wrapper.sh` in this repo extends that wrapper to:
 
@@ -73,7 +87,19 @@ Rollback:
 sudo mv /usr/local/bin/openwhispr.bak /usr/local/bin/openwhispr
 ```
 
-If you move this repo, set `WHISPR_COMPOSE_DIR` in your shell environment to point at the new location — the wrapper honors that override.
+If you move this repo, point the wrapper at the new location. It resolves the compose project in order:
+`$WHISPR_COMPOSE_DIR` → the path in `~/.config/openwhispr-docker/compose-dir` → `~/docker/openwhispr-docker`.
+
+Prefer the config file over exporting the variable in `~/.bashrc` — the `.desktop` launcher does not
+inherit an interactive shell's environment:
+
+```bash
+mkdir -p ~/.config/openwhispr-docker
+echo "/path/to/openwhispr-docker" > ~/.config/openwhispr-docker/compose-dir
+```
+
+When this path is wrong the GUI still launches, but container auto-start and `openwhispr --stop` both
+silently no-op.
 
 ## Switching models
 
@@ -90,4 +116,6 @@ The first request after a fresh model is slower while the model loads into VRAM;
 - **`could not select device driver "nvidia"`** — install `nvidia-container-toolkit` and restart Docker.
 - **CUDA OOM** — pick a smaller model in `.env` (`turbo` → `small` → `base`).
 - **Parakeet runs on CPU even with `DEVICE=cuda`** — expected. The PyPI `sherpa-onnx` wheel has no CUDA support; only Whisper uses the GPU.
+- **The model in the GUI has no effect** — the server ignores the requested model; the real selector is `MODEL=` in `.env`, applied with `docker compose up -d`.
+- **Hotkey does nothing / Google SSO won't complete** — see [SETUP.md §5 and §4c](./SETUP.md).
 - **Health check stays "unhealthy" for ~2 min after start** — the `start_period` is 120 s to cover model load. If still unhealthy after that, check `docker compose logs whispr`.
