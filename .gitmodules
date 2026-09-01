@@ -1,0 +1,3 @@
+[submodule "multi-model-audio-transcript-server"]
+	path = multi-model-audio-transcript-server
+	url = https://github.com/chrisdreid/multi-model-audio-transcript-server.git

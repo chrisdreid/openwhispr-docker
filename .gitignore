@@ -9,3 +9,5 @@ lib64/
 pyvenv.cfg
 models/
 __pycache__
+
+git-commit.md
